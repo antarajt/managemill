@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MillTrack — Meal Management</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0c0e12;
+  --surface: #13161c;
+  --surface2: #1a1e27;
+  --surface3: #212534;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #00d4a0;
+  --accent2: #0099ff;
+  --accent3: #ff6b6b;
+  --accent4: #f5a623;
+  --text: #e8eaf0;
+  --text2: #8b90a0;
+  --text3: #555b6e;
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px;}
+
+/* ───── AUTH ───── */
+#auth-screen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);z-index:999;
+  background-image:radial-gradient(ellipse at 20% 20%, rgba(0,212,160,0.06) 0%, transparent 60%),
+                   radial-gradient(ellipse at 80% 80%, rgba(0,153,255,0.06) 0%, transparent 60%);
+}
+.auth-box{
+  width:420px;padding:44px;
+  background:var(--surface);border:1px solid var(--border2);border-radius:20px;
+  position:relative;overflow:hidden;
+}
+.auth-box::before{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle, rgba(0,212,160,0.12), transparent 70%);
+  pointer-events:none;
+}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;}
+.auth-logo-icon{
+  width:40px;height:40px;border-radius:10px;
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.auth-logo-text{font-size:20px;font-weight:600;letter-spacing:-0.5px;}
+.auth-logo-text span{color:var(--accent);}
+.auth-title{font-size:22px;font-weight:600;letter-spacing:-0.5px;margin-bottom:6px;}
+.auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase;}
+.field input{
+  width:100%;padding:11px 14px;
+  background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  color:var(--text);font-size:14px;font-family:'Sora',sans-serif;
+  outline:none;transition:border-color .2s;
+}
+.field input:focus{border-color:var(--accent);}
+.btn-auth{
+  width:100%;padding:12px;margin-top:8px;
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:'Sora',sans-serif;letter-spacing:0.02em;
+  transition:opacity .2s,transform .1s;
+}
+.btn-auth:hover{opacity:0.9;}
+.btn-auth:active{transform:scale(0.99);}
+.auth-error{
+  margin-top:12px;padding:10px 14px;
+  background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.25);
+  border-radius:var(--radius-sm);font-size:13px;color:#ff6b6b;display:none;
+}
+.auth-switch{margin-top:20px;text-align:center;font-size:13px;color:var(--text2);}
+.auth-switch a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:500;}
+.demo-creds{
+  margin-top:16px;padding:12px 14px;
+  background:rgba(0,212,160,0.06);border:1px solid rgba(0,212,160,0.15);
+  border-radius:var(--radius-sm);font-size:12px;color:var(--text2);
+}
+.demo-creds strong{color:var(--accent);font-family:'DM Mono',monospace;}
+
+/* ───── LAYOUT ───── */
+#app{display:none;height:100vh;overflow:hidden;flex-direction:row;}
+#app.visible{display:flex;}
+.sidebar{
+  width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:0 0 20px;
+  overflow-y:auto;
+}
+.sidebar-logo{
+  padding:24px 20px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;margin-bottom:8px;
+}
+.logo-icon{
+  width:34px;height:34px;border-radius:8px;
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.logo-text{font-size:16px;font-weight:600;letter-spacing:-0.5px;}
+.logo-text span{color:var(--accent);}
+.sidebar-section{padding:16px 12px 6px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 16px;margin:1px 8px;border-radius:var(--radius-sm);
+  cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;
+  white-space:nowrap;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(0,212,160,0.1);color:var(--accent);}
+.nav-item .nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.sidebar-user{
+  margin-top:auto;padding:14px 16px;margin:auto 8px 0;
+  background:var(--surface2);border-radius:var(--radius-sm);
+  border:1px solid var(--border);
+}
+.user-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.user-role{font-size:11px;color:var(--text2);}
+.logout-btn{
+  width:100%;margin-top:10px;padding:6px;
+  background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);
+  border-radius:6px;color:#ff6b6b;font-size:12px;cursor:pointer;
+  font-family:'Sora',sans-serif;transition:background .15s;
+}
+.logout-btn:hover{background:rgba(255,107,107,0.18);}
+
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.topbar{
+  padding:18px 28px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);flex-shrink:0;
+  position:sticky;top:0;z-index:10;
+}
+.topbar-title{font-size:18px;font-weight:600;letter-spacing:-0.4px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.month-badge{
+  padding:5px 12px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:99px;font-size:12px;color:var(--text2);font-family:'DM Mono',monospace;
+}
+
+.page-content{padding:24px 28px;flex:1;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* ───── CARDS ───── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;position:relative;overflow:hidden;transition:border-color .2s;
+}
+.stat-card:hover{border-color:var(--border2);}
+.stat-card::after{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:100px;height:100px;border-radius:50%;
+  background:var(--glow);opacity:0.3;pointer-events:none;
+}
+.stat-card.green{--glow:radial-gradient(circle, rgba(0,212,160,0.3), transparent);}
+.stat-card.blue{--glow:radial-gradient(circle, rgba(0,153,255,0.3), transparent);}
+.stat-card.amber{--glow:radial-gradient(circle, rgba(245,166,35,0.3), transparent);}
+.stat-card.red{--glow:radial-gradient(circle, rgba(255,107,107,0.3), transparent);}
+.stat-icon{font-size:22px;margin-bottom:12px;}
+.stat-label{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;}
+.stat-value{font-size:26px;font-weight:600;letter-spacing:-1px;font-family:'DM Mono',monospace;}
+.stat-value.green{color:var(--accent);}
+.stat-value.blue{color:var(--accent2);}
+.stat-value.amber{color:var(--accent4);}
+.stat-value.red{color:var(--accent3);}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* ───── SECTIONS ───── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.section-title{font-size:15px;font-weight:600;letter-spacing:-0.3px;}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;margin-bottom:16px;
+}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.chart-wrap{position:relative;height:220px;}
+
+/* ───── TABLE ───── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--surface2);}
+th{padding:10px 14px;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;text-align:left;white-space:nowrap;}
+td{padding:11px 14px;font-size:13px;color:var(--text);border-top:1px solid var(--border);}
+tr:hover td{background:rgba(255,255,255,0.02);}
+.mono{font-family:'DM Mono',monospace;}
+
+/* ───── BADGES ───── */
+.badge{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:500;}
+.badge-green{background:rgba(0,212,160,0.12);color:var(--accent);}
+.badge-red{background:rgba(255,107,107,0.12);color:#ff6b6b;}
+.badge-amber{background:rgba(245,166,35,0.12);color:var(--accent4);}
+.badge-blue{background:rgba(0,153,255,0.12);color:var(--accent2);}
+
+/* ───── BUTTONS ───── */
+.btn{
+  padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;
+  cursor:pointer;font-family:'Sora',sans-serif;transition:all .15s;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text);display:inline-flex;align-items:center;gap:6px;
+}
+.btn:hover{background:var(--surface3);border-color:var(--border2);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#0c0e12;font-weight:600;}
+.btn-primary:hover{opacity:0.88;background:var(--accent);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-danger{background:rgba(255,107,107,0.1);border-color:rgba(255,107,107,0.25);color:#ff6b6b;}
+.btn-danger:hover{background:rgba(255,107,107,0.18);}
+
+/* ───── MODAL ───── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+  z-index:100;display:none;align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);border-radius:20px;
+  padding:28px;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto;
+}
+.modal-title{font-size:16px;font-weight:600;letter-spacing:-0.3px;margin-bottom:20px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-field{margin-bottom:14px;}
+.form-field label{display:block;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;}
+.form-field input,.form-field select,.form-field textarea{
+  width:100%;padding:9px 12px;
+  background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  color:var(--text);font-size:13px;font-family:'Sora',sans-serif;outline:none;
+  transition:border-color .2s;
+}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--accent);}
+.form-field select option{background:var(--surface2);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+
+/* ───── MEAL CALENDAR ───── */
+.meal-calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-day{
+  aspect-ratio:1;border-radius:var(--radius-sm);border:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:10px;color:var(--text3);cursor:default;transition:all .15s;
+}
+.cal-day.has-meal{
+  background:rgba(0,212,160,0.1);border-color:rgba(0,212,160,0.3);
+  color:var(--accent);
+}
+.cal-day.has-meal .cal-num{font-size:15px;font-weight:600;font-family:'DM Mono',monospace;}
+.cal-day-label{font-size:9px;margin-top:1px;}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+.cal-header-day{text-align:center;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;}
+
+/* ───── PROGRESS BAR ───── */
+.progress-bar{height:4px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:6px;}
+.progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg, var(--accent), var(--accent2));}
+
+/* ───── TOAST ───── */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  padding:12px 18px;background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);font-size:13px;color:var(--text);
+  transform:translateY(60px);opacity:0;transition:all .3s;pointer-events:none;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.success{border-color:rgba(0,212,160,0.4);color:var(--accent);}
+#toast.error{border-color:rgba(255,107,107,0.4);color:#ff6b6b;}
+
+/* ───── MEMBER PORTAL (user view) ───── */
+.portal-header{
+  background:linear-gradient(135deg, rgba(0,212,160,0.1), rgba(0,153,255,0.08));
+  border:1px solid rgba(0,212,160,0.15);border-radius:var(--radius);
+  padding:24px;margin-bottom:20px;position:relative;overflow:hidden;
+}
+.portal-header::before{
+  content:'';position:absolute;right:-40px;top:-40px;width:160px;height:160px;
+  border-radius:50%;background:radial-gradient(circle, rgba(0,212,160,0.15), transparent 70%);
+}
+.portal-name{font-size:22px;font-weight:600;letter-spacing:-0.5px;margin-bottom:4px;}
+.portal-email{font-size:13px;color:var(--text2);}
+.portal-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px;}
+.portal-stat{background:rgba(0,0,0,0.2);border-radius:var(--radius-sm);padding:12px;text-align:center;}
+.portal-stat-val{font-size:20px;font-weight:600;font-family:'DM Mono',monospace;color:var(--accent);}
+.portal-stat-lbl{font-size:10px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.05em;}
+
+/* ───── RESPONSIVE ───── */
+@media(max-width:760px){
+  .sidebar{display:none;}
+  .two-col{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .page-content{padding:16px;}
+  .topbar{padding:14px 16px;}
+  .mobile-menu{display:flex!important;}
+}
+.mobile-menu{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:18px;}
+
+/* ───── DIVIDER ───── */
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.empty{padding:32px;text-align:center;color:var(--text3);font-size:13px;}
+
+/* avatar */
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🍽</div>
+      <div class="auth-logo-text">Mill<span>Track</span></div>
+    </div>
+    <div class="auth-title" id="auth-title">Welcome back</div>
+    <div class="auth-sub" id="auth-sub">Sign in to your account to continue</div>
+    <div class="field" id="name-field" style="display:none;">
+      <label>Full Name</label>
+      <input type="text" id="reg-name" placeholder="Your full name">
+    </div>
+    <div class="field">
+      <label>Email Address</label>
+      <input type="email" id="auth-email" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="auth-pass" placeholder="••••••••">
+    </div>
+    <button class="btn-auth" id="auth-btn">Sign In</button>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-switch" id="auth-switch">
+      Don't have an account? <a onclick="toggleAuth()">Register</a>
+    </div>
+    <div class="demo-creds">
+      <strong>Admin:</strong> admin@mill.com / admin123<br>
+      <strong>Member:</strong> milon@mill.com / milon123
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🍽</div>
+      <div class="logo-text">Mill<span>Track</span></div>
+    </div>
+    <div id="nav-admin" style="display:none;">
+      <div class="sidebar-section">Admin</div>
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
+      <div class="nav-item" onclick="showPage('members')"><span class="nav-icon">👥</span>Members</div>
+      <div class="nav-item" onclick="showPage('meals')"><span class="nav-icon">🍛</span>Daily Meals</div>
+      <div class="nav-item" onclick="showPage('expenses')"><span class="nav-icon">💰</span>Expenses</div>
+      <div class="nav-item" onclick="showPage('reports')"><span class="nav-icon">📄</span>Reports</div>
+    </div>
+    <div id="nav-member" style="display:none;">
+      <div class="sidebar-section">My Account</div>
+      <div class="nav-item active" onclick="showPage('my-dashboard')"><span class="nav-icon">🏠</span>My Dashboard</div>
+      <div class="nav-item" onclick="showPage('my-meals')"><span class="nav-icon">🍛</span>My Meals</div>
+      <div class="nav-item" onclick="showPage('my-payments')"><span class="nav-icon">💳</span>Payments</div>
+    </div>
+    <div class="sidebar-user" id="sidebar-user">
+      <div class="user-name" id="sidebar-name">—</div>
+      <div class="user-role" id="sidebar-role">—</div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="mobile-menu" onclick="toggleSidebar()">☰</div>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="month-badge" id="month-badge"></div>
+        <button class="btn btn-sm btn-primary" id="quick-action-btn" onclick="quickAction()" style="display:none;">+ Add Meal</button>
+      </div>
+    </div>
+    <div class="page-content">
+
+      <!-- ADMIN: DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="admin-stats"></div>
+        <div class="two-col">
+          <div class="card">
+            <div class="section-header">
+              <span class="section-title">Monthly Meals</span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-meals"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-header">
+              <span class="section-title">Monthly Expenses</span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-expenses"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-header">
+            <span class="section-title">Member Overview</span>
+            <button class="btn btn-sm btn-primary" onclick="showPage('members')">View All</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Member</th><th>Meals</th><th>Cost</th><th>Paid</th><th>Due</th><th>Status</th></tr></thead>
+              <tbody id="overview-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: MEMBERS -->
+      <div class="page" id="page-members">
+        <div class="section-header">
+          <span class="section-title">All Members</span>
+          <button class="btn btn-primary btn-sm" onclick="openModal('member')">+ Add Member</button>
+        </div>
+        <div class="card" style="padding:0;">
+          <div class="table-wrap" style="border:none;">
+            <table>
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Meals</th><th>Cost</th><th>Paid</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="members-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: MEALS -->
+      <div class="page" id="page-meals">
+        <div class="section-header">
+          <span class="section-title">Daily Meal Entries</span>
+          <button class="btn btn-primary btn-sm" onclick="openModal('meal')">+ Add Meal Entry</button>
+        </div>
+        <div class="card" style="padding:0;">
+          <div class="table-wrap" style="border:none;">
+            <table>
+              <thead><tr><th>Date</th><th>Member</th><th>Meals</th><th>Cost</th><th>Actions</th></tr></thead>
+              <tbody id="meals-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: EXPENSES -->
+      <div class="page" id="page-expenses">
+        <div class="section-header">
+          <span class="section-title">Bazar / Expenses</span>
+          <button class="btn btn-primary btn-sm" onclick="openModal('expense')">+ Add Expense</button>
+        </div>
+        <div class="stats-grid" id="expense-stats" style="margin-bottom:16px;"></div>
+        <div class="card" style="padding:0;">
+          <div class="table-wrap" style="border:none;">
+            <table>
+              <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Added By</th><th>Actions</th></tr></thead>
+              <tbody id="expenses-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: REPORTS -->
+      <div class="page" id="page-reports">
+        <div class="section-header">
+          <span class="section-title">Monthly Report</span>
+          <button class="btn btn-primary btn-sm" onclick="exportPDF()">⬇ Export PDF</button>
+        </div>
+        <div id="report-content"></div>
+      </div>
+
+      <!-- MEMBER: MY DASHBOARD -->
+      <div class="page" id="page-my-dashboard">
+        <div class="portal-header" id="portal-header"></div>
+        <div class="two-col">
+          <div class="card">
+            <div class="section-title" style="margin-bottom:14px;">This Month — Meal Calendar</div>
+            <div class="cal-header">
+              <div class="cal-header-day">Sun</div><div class="cal-header-day">Mon</div>
+              <div class="cal-header-day">Tue</div><div class="cal-header-day">Wed</div>
+              <div class="cal-header-day">Thu</div><div class="cal-header-day">Fri</div>
+              <div class="cal-header-day">Sat</div>
+            </div>
+            <div class="meal-calendar" id="meal-calendar"></div>
+          </div>
+          <div class="card">
+            <div class="section-title" style="margin-bottom:14px;">Cost Breakdown</div>
+            <div id="cost-breakdown"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEMBER: MY MEALS -->
+      <div class="page" id="page-my-meals">
+        <div class="section-header"><span class="section-title">My Meal History</span></div>
+        <div class="card" style="padding:0;">
+          <div class="table-wrap" style="border:none;">
+            <table>
+              <thead><tr><th>Date</th><th>Meals</th><th>Cost</th></tr></thead>
+              <tbody id="my-meals-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEMBER: MY PAYMENTS -->
+      <div class="page" id="page-my-payments">
+        <div class="section-header"><span class="section-title">Payment Summary</span></div>
+        <div id="payment-detail"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-member">
+  <div class="modal">
+    <div class="modal-title" id="modal-member-title">Add New Member</div>
+    <input type="hidden" id="edit-member-id">
+    <div class="form-grid">
+      <div class="form-field"><label>Full Name</label><input id="m-name" placeholder="Full name"></div>
+      <div class="form-field"><label>Email</label><input id="m-email" type="email" placeholder="email@example.com"></div>
+      <div class="form-field"><label>Password</label><input id="m-pass" type="password" placeholder="Password"></div>
+      <div class="form-field"><label>Amount Paid (৳)</label><input id="m-paid" type="number" value="0" min="0"></div>
+    </div>
+    <div class="form-field"><label>Role</label>
+      <select id="m-role"><option value="member">Member</option><option value="admin">Admin</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-member')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMember()">Save Member</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-meal">
+  <div class="modal">
+    <div class="modal-title">Add Meal Entry</div>
+    <input type="hidden" id="edit-meal-id">
+    <div class="form-grid">
+      <div class="form-field"><label>Date</label><input id="ml-date" type="date"></div>
+      <div class="form-field"><label>Meals Count</label><input id="ml-count" type="number" value="1" min="0" max="10" step="0.5"></div>
+    </div>
+    <div class="form-field"><label>Member</label><select id="ml-user"></select></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-meal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMeal()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-expense">
+  <div class="modal">
+    <div class="modal-title">Add Expense</div>
+    <input type="hidden" id="edit-expense-id">
+    <div class="form-grid">
+      <div class="form-field"><label>Date</label><input id="ex-date" type="date"></div>
+      <div class="form-field"><label>Amount (৳)</label><input id="ex-amount" type="number" min="0" placeholder="2000"></div>
+    </div>
+    <div class="form-field"><label>Description</label><input id="ex-desc" placeholder="e.g. Vegetables, Fish, Rice..."></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-expense')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA LAYER (localStorage as database)
+// ─────────────────────────────────────────────
+const DB = {
+  get(k) { try{ return JSON.parse(localStorage.getItem('mt_'+k)||'null'); }catch(e){return null;} },
+  set(k,v) { localStorage.setItem('mt_'+k, JSON.stringify(v)); },
+  users() { return this.get('users')||[]; },
+  meals() { return this.get('meals')||[]; },
+  expenses() { return this.get('expenses')||[]; },
+  saveUsers(d) { this.set('users',d); },
+  saveMeals(d) { this.set('meals',d); },
+  saveExpenses(d) { this.set('expenses',d); }
+};
+
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+// ─── SEED DATA ───
+function seedData() {
+  if(DB.get('seeded')) return;
+  const users = [
+    {id:'u1',name:'Admin',email:'admin@mill.com',password:'admin123',role:'admin',paid:0},
+    {id:'u2',name:'Milon',email:'milon@mill.com',password:'milon123',role:'member',paid:2000},
+    {id:'u3',name:'Antar',email:'antar@mill.com',password:'antar123',role:'member',paid:1500},
+    {id:'u4',name:'Partho',email:'partho@mill.com',password:'partho123',role:'member',paid:1800},
+    {id:'u5',name:'Nurnobi',email:'nurnobi@mill.com',password:'nur123',role:'member',paid:1600},
+    {id:'u6',name:'Mejhba',email:'mejhba@mill.com',password:'mejhba123',role:'member',paid:500},
+    {id:'u7',name:'Akash',email:'akash@mill.com',password:'akash123',role:'member',paid:3000},
+    {id:'u8',name:'Apon',email:'apon@mill.com',password:'apon123',role:'member',paid:1200},
+    {id:'u9',name:'Sakib',email:'sakib@mill.com',password:'sakib123',role:'member',paid:2200},
+    {id:'u10',name:'Sojib',email:'sojib@mill.com',password:'sojib123',role:'member',paid:1700},
+    {id:'u11',name:'Riyad',email:'riyad@mill.com',password:'riyad123',role:'member',paid:1900},
+    {id:'u12',name:'Taposh',email:'taposh@mill.com',password:'taposh123',role:'member',paid:5000},
+  ];
+  DB.saveUsers(users);
+
+  const now = new Date();
+  const meals = [];
+  const memberIds = ['u2','u3','u4','u5','u6','u7','u8','u9','u10','u11','u12'];
+  const baseMills = {u2:16,u3:30,u4:38,u5:35,u6:41,u7:0,u8:44,u9:40,u10:47,u11:46,u12:46};
+  memberIds.forEach(uid=>{
+    let rem = baseMills[uid]||0;
+    for(let d=1; d<=28 && rem>0; d++){
+      const meals_today = Math.min(rem, d%3===0?2:1);
+      if(meals_today>0 && Math.random()>0.3){
+        meals.push({id:uid+'d'+d, userId:uid, date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, count:meals_today});
+        rem -= meals_today;
+      }
+    }
+  });
+  DB.saveMeals(meals);
+
+  const expenses = [
+    {id:'e1',date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`,amount:2000,desc:'Rice & Lentils',by:'Admin'},
+    {id:'e2',date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-04`,amount:2310,desc:'Vegetables & Fish',by:'Admin'},
+    {id:'e3',date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-08`,amount:1500,desc:'Chicken & Spices',by:'Admin'},
+    {id:'e4',date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-12`,amount:1867,desc:'Mixed Grocery',by:'Admin'},
+    {id:'e5',date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-16`,amount:2100,desc:'Fish & Vegetables',by:'Admin'},
+    {id:'e6',date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-20`,amount:1900,desc:'Rice & Meat',by:'Admin'},
+    {id:'e7',date:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-24`,amount:2000,desc:'Weekly Grocery',by:'Admin'},
+  ];
+  DB.saveExpenses(expenses);
+  DB.set('seeded', true);
+}
+
+// ─── CALCULATIONS ───
+function calcStats() {
+  const meals = DB.meals();
+  const expenses = DB.expenses();
+  const totalMeals = meals.reduce((s,m)=>s+parseFloat(m.count||0),0);
+  const totalExp = expenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const rate = totalMeals>0 ? totalExp/totalMeals : 0;
+  return {totalMeals, totalExp, rate};
+}
+
+function userMeals(userId) {
+  return DB.meals().filter(m=>m.userId===userId).reduce((s,m)=>s+parseFloat(m.count||0),0);
+}
+
+function userDue(user) {
+  const {rate} = calcStats();
+  const cost = userMeals(user.id) * rate;
+  return cost - (parseFloat(user.paid)||0);
+}
+
+// ─── AUTH STATE ───
+let currentUser = null;
+let isAuthMode = 'login';
+
+function toggleAuth() {
+  isAuthMode = isAuthMode==='login'?'register':'login';
+  document.getElementById('auth-title').textContent = isAuthMode==='login'?'Welcome back':'Create account';
+  document.getElementById('auth-sub').textContent = isAuthMode==='login'?'Sign in to continue':'Register to join your mill';
+  document.getElementById('auth-btn').textContent = isAuthMode==='login'?'Sign In':'Register';
+  document.getElementById('name-field').style.display = isAuthMode==='register'?'block':'none';
+  document.getElementById('auth-switch').innerHTML = isAuthMode==='login'
+    ? "Don't have an account? <a onclick='toggleAuth()'>Register</a>"
+    : "Already have an account? <a onclick='toggleAuth()'>Sign In</a>";
+}
+
+function doAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display='none';
+
+  if(isAuthMode==='register') {
+    const name = document.getElementById('reg-name').value.trim();
+    if(!name||!email||!pass){errEl.textContent='All fields required.';errEl.style.display='block';return;}
+    const users = DB.users();
+    if(users.find(u=>u.email===email)){errEl.textContent='Email already registered.';errEl.style.display='block';return;}
+    const nu = {id:uid(),name,email,password:pass,role:'member',paid:0};
+    users.push(nu);
+    DB.saveUsers(users);
+    login(nu);
+  } else {
+    if(!email||!pass){errEl.textContent='Please enter email and password.';errEl.style.display='block';return;}
+    const user = DB.users().find(u=>u.email===email&&u.password===pass);
+    if(!user){errEl.textContent='Invalid email or password.';errEl.style.display='block';return;}
+    login(user);
+  }
+}
+
+function login(user) {
+  currentUser = user;
+  DB.set('session', user.id);
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').classList.add('visible');
+  initApp();
+}
+
+function logout() {
+  currentUser = null;
+  DB.set('session', null);
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('auth-screen').style.display='flex';
+  destroyCharts();
+}
+
+function restoreSession() {
+  const sid = DB.get('session');
+  if(sid) {
+    const user = DB.users().find(u=>u.id===sid);
+    if(user){login(user);return;}
+  }
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+// ─── APP INIT ───
+let charts = {};
+function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});charts={};}
+
+function initApp() {
+  const now = new Date();
+  document.getElementById('month-badge').textContent = now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('sidebar-name').textContent = currentUser.name;
+  document.getElementById('sidebar-role').textContent = currentUser.role==='admin'?'Administrator':'Member';
+
+  if(currentUser.role==='admin'){
+    document.getElementById('nav-admin').style.display='block';
+    document.getElementById('nav-member').style.display='none';
+    document.getElementById('quick-action-btn').style.display='flex';
+    showPage('dashboard');
+  } else {
+    document.getElementById('nav-admin').style.display='none';
+    document.getElementById('nav-member').style.display='block';
+    document.getElementById('quick-action-btn').style.display='none';
+    showPage('my-dashboard');
+  }
+}
+
+// ─── NAVIGATION ───
+let activePage = '';
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg = document.getElementById('page-'+name);
+  if(pg) pg.classList.add('active');
+
+  const titles = {
+    'dashboard':'Dashboard','members':'Members','meals':'Daily Meals',
+    'expenses':'Expenses','reports':'Reports',
+    'my-dashboard':'My Dashboard','my-meals':'My Meals','my-payments':'My Payments'
+  };
+  document.getElementById('topbar-title').textContent = titles[name]||name;
+
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+name+"'")) n.classList.add('active');
+  });
+
+  activePage = name;
+  renderPage(name);
+}
+
+function renderPage(name) {
+  switch(name){
+    case 'dashboard': renderAdminDashboard(); break;
+    case 'members': renderMembersPage(); break;
+    case 'meals': renderMealsPage(); break;
+    case 'expenses': renderExpensesPage(); break;
+    case 'reports': renderReportsPage(); break;
+    case 'my-dashboard': renderMyDashboard(); break;
+    case 'my-meals': renderMyMeals(); break;
+    case 'my-payments': renderMyPayments(); break;
+  }
+}
+
+// ─── COLORS for members ───
+const COLORS = ['#00d4a0','#0099ff','#f5a623','#ff6b6b','#a78bfa','#34d399','#f472b6','#60a5fa','#fb923c','#22d3ee','#e879f9','#4ade80'];
+
+// ─── ADMIN DASHBOARD ───
+function renderAdminDashboard() {
+  const {totalMeals, totalExp, rate} = calcStats();
+  const users = DB.users().filter(u=>u.role!=='admin');
+  const totalDue = users.reduce((s,u)=>s+Math.max(0,userDue(u)),0);
+
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat-card green"><div class="stat-icon">🍛</div><div class="stat-label">Total Meals</div><div class="stat-value green">${totalMeals.toFixed(1)}</div><div class="stat-sub">This month</div></div>
+    <div class="stat-card blue"><div class="stat-icon">💰</div><div class="stat-label">Total Expenses</div><div class="stat-value blue">৳${totalExp.toLocaleString()}</div><div class="stat-sub">Bazar cost</div></div>
+    <div class="stat-card amber"><div class="stat-icon">⚖️</div><div class="stat-label">Cost Per Meal</div><div class="stat-value amber">৳${rate.toFixed(2)}</div><div class="stat-sub">Auto calculated</div></div>
+    <div class="stat-card red"><div class="stat-icon">⚠️</div><div class="stat-label">Total Due</div><div class="stat-value red">৳${totalDue.toFixed(0)}</div><div class="stat-sub">Pending collection</div></div>
+  `;
+
+  renderOverviewTable();
+  renderCharts();
+}
+
+function renderOverviewTable(){
+  const {rate} = calcStats();
+  const users = DB.users().filter(u=>u.role!=='admin');
+  const tbody = document.getElementById('overview-table');
+  if(!tbody) return;
+  tbody.innerHTML = users.map((u,i)=>{
+    const meals = userMeals(u.id);
+    const cost = meals*rate;
+    const due = cost-(parseFloat(u.paid)||0);
+    const color = COLORS[i%COLORS.length];
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px;">
+        <div class="av" style="background:${color}22;color:${color}">${u.name.slice(0,2).toUpperCase()}</div>${u.name}
+      </div></td>
+      <td class="mono">${meals.toFixed(1)}</td>
+      <td class="mono">৳${cost.toFixed(0)}</td>
+      <td class="mono">৳${(parseFloat(u.paid)||0).toFixed(0)}</td>
+      <td class="mono" style="color:${due>0?'var(--accent3)':'var(--accent)'}">${due>0?'+৳'+due.toFixed(0):'৳'+Math.abs(due).toFixed(0)}</td>
+      <td>${due>0?'<span class="badge badge-red">Due</span>':due<-50?'<span class="badge badge-green">Overpaid</span>':'<span class="badge badge-amber">Clear</span>'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">No members yet</td></tr>';
+}
+
+function renderCharts(){
+  destroyCharts();
+  const meals = DB.meals();
+  const expenses = DB.expenses();
+  const users = DB.users().filter(u=>u.role!=='admin');
+
+  // Meals per member
+  const mealCtx = document.getElementById('chart-meals');
+  if(mealCtx){
+    const labels = users.map(u=>u.name);
+    const data = users.map(u=>userMeals(u.id));
+    charts.meals = new Chart(mealCtx, {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{
+          label:'Meals',data,
+          backgroundColor: users.map((_,i)=>COLORS[i%COLORS.length]+'88'),
+          borderColor: users.map((_,i)=>COLORS[i%COLORS.length]),
+          borderWidth:1, borderRadius:6
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8b90a0',font:{size:10}}},
+          y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8b90a0',font:{size:10}}}
+        }
+      }
+    });
+  }
+
+  // Expenses over time
+  const expCtx = document.getElementById('chart-expenses');
+  if(expCtx){
+    const sorted = [...expenses].sort((a,b)=>a.date>b.date?1:-1);
+    charts.expenses = new Chart(expCtx, {
+      type:'line',
+      data:{
+        labels: sorted.map(e=>e.date.slice(5)),
+        datasets:[{
+          label:'৳',data:sorted.map(e=>e.amount),
+          borderColor:'#0099ff',backgroundColor:'rgba(0,153,255,0.08)',
+          borderWidth:2,pointRadius:4,pointBackgroundColor:'#0099ff',fill:true,tension:0.4
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8b90a0',font:{size:10}}},
+          y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8b90a0',font:{size:10}}}
+        }
+      }
+    });
+  }
+}
+
+// ─── MEMBERS PAGE ───
+function renderMembersPage(){
+  const {rate} = calcStats();
+  const users = DB.users();
+  const tbody = document.getElementById('members-table');
+  tbody.innerHTML = users.map((u,i)=>{
+    const meals = userMeals(u.id);
+    const cost = meals*rate;
+    const due = cost-(parseFloat(u.paid)||0);
+    const color = COLORS[i%COLORS.length];
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px;">
+        <div class="av" style="background:${color}22;color:${color}">${u.name.slice(0,2).toUpperCase()}</div>${u.name}
+      </div></td>
+      <td style="color:var(--text2)">${u.email}</td>
+      <td>${u.role==='admin'?'<span class="badge badge-blue">Admin</span>':'<span class="badge badge-amber">Member</span>'}</td>
+      <td class="mono">${meals.toFixed(1)}</td>
+      <td class="mono">৳${cost.toFixed(0)}</td>
+      <td class="mono">৳${(parseFloat(u.paid)||0).toFixed(0)}</td>
+      <td class="mono" style="color:${due>0?'var(--accent3)':'var(--accent)'}">${due>0?'+৳'+due.toFixed(0):'৳'+Math.abs(due).toFixed(0)+' CR'}</td>
+      <td>${due>0?'<span class="badge badge-red">Due</span>':'<span class="badge badge-green">Clear</span>'}</td>
+      <td><div style="display:flex;gap:6px;">
+        <button class="btn btn-sm" onclick="editMember('${u.id}')">Edit</button>
+        ${u.id!==currentUser.id?`<button class="btn btn-sm btn-danger" onclick="deleteMember('${u.id}')">Del</button>`:''}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── MEALS PAGE ───
+function renderMealsPage(){
+  const {rate} = calcStats();
+  const users = DB.users();
+  const meals = [...DB.meals()].sort((a,b)=>b.date>a.date?1:-1);
+  const tbody = document.getElementById('meals-table');
+  tbody.innerHTML = meals.map(m=>{
+    const user = users.find(u=>u.id===m.userId)||{name:'Unknown'};
+    return `<tr>
+      <td class="mono">${m.date}</td>
+      <td>${user.name}</td>
+      <td class="mono">${m.count}</td>
+      <td class="mono">৳${(m.count*rate).toFixed(2)}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteMeal('${m.id}')">Delete</button></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="5" class="empty">No meal entries yet</td></tr>';
+}
+
+// ─── EXPENSES PAGE ───
+function renderExpensesPage(){
+  const expenses = [...DB.expenses()].sort((a,b)=>b.date>a.date?1:-1);
+  const total = expenses.reduce((s,e)=>s+parseFloat(e.amount),0);
+  document.getElementById('expense-stats').innerHTML = `
+    <div class="stat-card blue"><div class="stat-label">Total Expenses</div><div class="stat-value blue">৳${total.toLocaleString()}</div></div>
+    <div class="stat-card amber"><div class="stat-label">No. of Entries</div><div class="stat-value amber">${expenses.length}</div></div>
+    <div class="stat-card green"><div class="stat-label">Avg Per Entry</div><div class="stat-value green">৳${expenses.length?Math.round(total/expenses.length):0}</div></div>
+  `;
+  const tbody = document.getElementById('expenses-table');
+  tbody.innerHTML = expenses.map(e=>`<tr>
+    <td class="mono">${e.date}</td>
+    <td>${e.desc}</td>
+    <td class="mono" style="color:var(--accent)">৳${parseFloat(e.amount).toLocaleString()}</td>
+    <td style="color:var(--text2)">${e.by||'Admin'}</td>
+    <td><button class="btn btn-sm btn-danger" onclick="deleteExpense('${e.id}')">Delete</button></td>
+  </tr>`).join('')||'<tr><td colspan="5" class="empty">No expenses yet</td></tr>';
+}
+
+// ─── REPORTS PAGE ───
+function renderReportsPage(){
+  const {totalMeals,totalExp,rate} = calcStats();
+  const users = DB.users().filter(u=>u.role!=='admin');
+  const now = new Date();
+  const month = now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  document.getElementById('report-content').innerHTML = `
+    <div class="card" id="pdf-report">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div>
+          <div style="font-size:20px;font-weight:600;letter-spacing:-0.5px;">Monthly Report</div>
+          <div style="font-size:13px;color:var(--text2);margin-top:2px;">${month}</div>
+        </div>
+        <div style="text-align:right;font-size:12px;color:var(--text3);">Generated ${new Date().toLocaleDateString()}</div>
+      </div>
+      <div class="stats-grid" style="margin-bottom:20px;">
+        <div class="stat-card green"><div class="stat-label">Total Meals</div><div class="stat-value green">${totalMeals.toFixed(1)}</div></div>
+        <div class="stat-card blue"><div class="stat-label">Total Expenses</div><div class="stat-value blue">৳${totalExp.toLocaleString()}</div></div>
+        <div class="stat-card amber"><div class="stat-label">Meal Rate</div><div class="stat-value amber">৳${rate.toFixed(2)}</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Member</th><th>Meals</th><th>Cost</th><th>Paid</th><th>Due</th><th>Status</th></tr></thead>
+          <tbody>${users.map((u,i)=>{
+            const m=userMeals(u.id),c=(m*rate),d=c-(parseFloat(u.paid)||0);
+            return `<tr><td>${i+1}</td><td>${u.name}</td><td class="mono">${m.toFixed(1)}</td><td class="mono">৳${c.toFixed(0)}</td><td class="mono">৳${(parseFloat(u.paid)||0)}</td><td class="mono" style="color:${d>0?'var(--accent3)':'var(--accent)'}">${d>0?'+৳'+d.toFixed(0):'৳'+Math.abs(d).toFixed(0)+' CR'}</td><td>${d>0?'<span class="badge badge-red">Due</span>':'<span class="badge badge-green">Clear</span>'}</td></tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ─── MEMBER DASHBOARD ───
+function renderMyDashboard(){
+  const {rate} = calcStats();
+  const u = currentUser;
+  const meals = userMeals(u.id);
+  const cost = meals*rate;
+  const paid = parseFloat(u.paid)||0;
+  const due = cost-paid;
+
+  document.getElementById('portal-header').innerHTML = `
+    <div class="portal-name">${u.name}</div>
+    <div class="portal-email">${u.email}</div>
+    <div class="portal-stats">
+      <div class="portal-stat"><div class="portal-stat-val">${meals.toFixed(1)}</div><div class="portal-stat-lbl">Meals</div></div>
+      <div class="portal-stat"><div class="portal-stat-val" style="color:var(--accent2)">৳${cost.toFixed(0)}</div><div class="portal-stat-lbl">Total Cost</div></div>
+      <div class="portal-stat"><div class="portal-stat-val" style="color:${due>0?'var(--accent3)':'var(--accent)'}">${due>0?'-৳'+due.toFixed(0):'+৳'+Math.abs(due).toFixed(0)}</div><div class="portal-stat-lbl">${due>0?'Due':'Credit'}</div></div>
+    </div>
+  `;
+
+  // Calendar
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+  const myMeals = DB.meals().filter(m=>m.userId===u.id);
+  const mealByDay = {};
+  myMeals.forEach(m=>{const d=parseInt(m.date.slice(-2));mealByDay[d]=(mealByDay[d]||0)+parseFloat(m.count);});
+
+  let calHTML = '';
+  for(let i=0;i<firstDay;i++) calHTML+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const m=mealByDay[d]||0;
+    calHTML+=`<div class="cal-day ${m>0?'has-meal':''}">
+      <div class="cal-num" style="font-size:${m>0?'15px':'12px'}">${m>0?m:d}</div>
+      <div class="cal-day-label">${m>0?'May '+d:''}</div>
+    </div>`;
+  }
+  document.getElementById('meal-calendar').innerHTML = calHTML;
+
+  // Cost breakdown
+  document.getElementById('cost-breakdown').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      ${[
+        ['Total Meals', meals.toFixed(1)+' meals', 'var(--accent)'],
+        ['Meal Rate', '৳'+rate.toFixed(2)+' / meal', 'var(--accent2)'],
+        ['Total Cost', '৳'+cost.toFixed(0), 'var(--accent4)'],
+        ['Amount Paid', '৳'+paid.toFixed(0), 'var(--accent)'],
+        ['Balance', due>0?'Due ৳'+due.toFixed(0):'Credit ৳'+Math.abs(due).toFixed(0), due>0?'var(--accent3)':'var(--accent)'],
+      ].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text2)">${l}</span>
+        <span style="font-size:13px;font-weight:600;color:${c};font-family:'DM Mono',monospace">${v}</span>
+      </div>`).join('')}
+    </div>
+    <div class="progress-bar" style="margin-top:16px;height:6px;">
+      <div class="progress-fill" style="width:${Math.min(100,Math.round((paid/Math.max(cost,1))*100))}%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;color:var(--text3);">
+      <span>Paid ${Math.min(100,Math.round((paid/Math.max(cost,1))*100))}%</span>
+      <span>৳${paid} / ৳${cost.toFixed(0)}</span>
+    </div>
+  `;
+}
+
+// ─── MY MEALS ───
+function renderMyMeals(){
+  const {rate} = calcStats();
+  const meals = [...DB.meals().filter(m=>m.userId===currentUser.id)].sort((a,b)=>b.date>a.date?1:-1);
+  document.getElementById('my-meals-table').innerHTML = meals.map(m=>`<tr>
+    <td class="mono">${m.date}</td>
+    <td class="mono">${m.count} meal${m.count!=1?'s':''}</td>
+    <td class="mono" style="color:var(--accent)">৳${(m.count*rate).toFixed(2)}</td>
+  </tr>`).join('')||'<tr><td colspan="3" class="empty">No meal records yet</td></tr>';
+}
+
+// ─── MY PAYMENTS ───
+function renderMyPayments(){
+  const {rate} = calcStats();
+  const u = DB.users().find(x=>x.id===currentUser.id)||currentUser;
+  const meals=userMeals(u.id), cost=meals*rate, paid=parseFloat(u.paid)||0, due=cost-paid;
+  document.getElementById('payment-detail').innerHTML = `
+    <div class="card">
+      <div class="section-title" style="margin-bottom:16px;">Payment Summary</div>
+      ${[
+        ['Total Meals Eaten', meals.toFixed(1)+' meals'],
+        ['Cost Per Meal', '৳'+rate.toFixed(2)],
+        ['Your Total Cost', '৳'+cost.toFixed(0)],
+        ['Total Deposited', '৳'+paid.toFixed(0)],
+      ].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--text2)">${l}</span><span class="mono">${v}</span></div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:14px 0;font-size:15px;font-weight:600;">
+        <span>${due>0?'Amount Due':'Overpaid'}</span>
+        <span style="color:${due>0?'var(--accent3)':'var(--accent)'}">৳${Math.abs(due).toFixed(0)}</span>
+      </div>
+      <div style="margin-top:8px;padding:12px 16px;background:${due>0?'rgba(255,107,107,0.07)':'rgba(0,212,160,0.07)'};border:1px solid ${due>0?'rgba(255,107,107,0.2)':'rgba(0,212,160,0.2)'};border-radius:var(--radius-sm);font-size:13px;color:${due>0?'#ff6b6b':'var(--accent)'}">
+        ${due>0?`Please deposit ৳${due.toFixed(0)} to settle your account.`:`You have a credit of ৳${Math.abs(due).toFixed(0)}. You are all clear!`}
+      </div>
+    </div>
+  `;
+}
+
+// ─── MODALS ───
+function openModal(type){
+  if(type==='member'){
+    document.getElementById('modal-member-title').textContent='Add New Member';
+    document.getElementById('edit-member-id').value='';
+    document.getElementById('m-name').value='';
+    document.getElementById('m-email').value='';
+    document.getElementById('m-pass').value='';
+    document.getElementById('m-paid').value='0';
+    document.getElementById('m-role').value='member';
+    document.getElementById('modal-member').classList.add('open');
+  } else if(type==='meal'){
+    document.getElementById('edit-meal-id').value='';
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('ml-date').value=today;
+    document.getElementById('ml-count').value='1';
+    const sel = document.getElementById('ml-user');
+    sel.innerHTML = DB.users().filter(u=>u.role!=='admin').map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+    document.getElementById('modal-meal').classList.add('open');
+  } else if(type==='expense'){
+    document.getElementById('edit-expense-id').value='';
+    document.getElementById('ex-date').value=new Date().toISOString().slice(0,10);
+    document.getElementById('ex-amount').value='';
+    document.getElementById('ex-desc').value='';
+    document.getElementById('modal-expense').classList.add('open');
+  }
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function editMember(id){
+  const u = DB.users().find(x=>x.id===id);
+  if(!u) return;
+  document.getElementById('modal-member-title').textContent='Edit Member';
+  document.getElementById('edit-member-id').value=id;
+  document.getElementById('m-name').value=u.name;
+  document.getElementById('m-email').value=u.email;
+  document.getElementById('m-pass').value=u.password||'';
+  document.getElementById('m-paid').value=u.paid||0;
+  document.getElementById('m-role').value=u.role;
+  document.getElementById('modal-member').classList.add('open');
+}
+
+function saveMember(){
+  const id = document.getElementById('edit-member-id').value;
+  const name=document.getElementById('m-name').value.trim();
+  const email=document.getElementById('m-email').value.trim();
+  const pass=document.getElementById('m-pass').value;
+  const paid=parseFloat(document.getElementById('m-paid').value)||0;
+  const role=document.getElementById('m-role').value;
+  if(!name||!email){showToast('Name and email required','error');return;}
+  const users=DB.users();
+  if(id){
+    const idx=users.findIndex(u=>u.id===id);
+    if(idx>=0){users[idx]={...users[idx],name,email,paid,role};if(pass)users[idx].password=pass;}
+  } else {
+    if(users.find(u=>u.email===email)){showToast('Email already exists','error');return;}
+    users.push({id:uid(),name,email,password:pass||'pass123',role,paid});
+  }
+  DB.saveUsers(users);
+  closeModal('modal-member');
+  showToast(id?'Member updated':'Member added');
+  renderPage(activePage);
+}
+
+function deleteMember(id){
+  if(!confirm('Delete this member?')) return;
+  DB.saveUsers(DB.users().filter(u=>u.id!==id));
+  DB.saveMeals(DB.meals().filter(m=>m.userId!==id));
+  showToast('Member deleted');
+  renderPage(activePage);
+}
+
+function saveMeal(){
+  const date=document.getElementById('ml-date').value;
+  const count=parseFloat(document.getElementById('ml-count').value)||0;
+  const userId=document.getElementById('ml-user').value;
+  if(!date||!userId||count<=0){showToast('Fill all fields','error');return;}
+  const meals=DB.meals();
+  meals.push({id:uid(),date,count,userId});
+  DB.saveMeals(meals);
+  closeModal('modal-meal');
+  showToast('Meal entry added');
+  renderPage(activePage);
+}
+
+function deleteMeal(id){
+  DB.saveMeals(DB.meals().filter(m=>m.id!==id));
+  showToast('Entry deleted');
+  renderMealsPage();
+}
+
+function saveExpense(){
+  const date=document.getElementById('ex-date').value;
+  const amount=parseFloat(document.getElementById('ex-amount').value)||0;
+  const desc=document.getElementById('ex-desc').value.trim();
+  if(!date||amount<=0){showToast('Fill all fields','error');return;}
+  const expenses=DB.expenses();
+  expenses.push({id:uid(),date,amount,desc,by:currentUser.name});
+  DB.saveExpenses(expenses);
+  closeModal('modal-expense');
+  showToast('Expense added');
+  renderPage(activePage);
+}
+
+function deleteExpense(id){
+  DB.saveExpenses(DB.expenses().filter(e=>e.id!==id));
+  showToast('Expense deleted');
+  renderExpensesPage();
+}
+
+function quickAction(){openModal('meal');}
+
+// ─── PDF EXPORT ───
+function exportPDF(){
+  renderReportsPage();
+  setTimeout(()=>{
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'p',unit:'mm',format:'a4'});
+    const {totalMeals,totalExp,rate}=calcStats();
+    const users=DB.users().filter(u=>u.role!=='admin');
+    const now=new Date();
+    const month=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+    doc.setFillColor(12,14,18); doc.rect(0,0,210,297,'F');
+    doc.setFillColor(19,22,28); doc.rect(0,0,210,50,'F');
+    doc.setTextColor(0,212,160); doc.setFontSize(22); doc.setFont('helvetica','bold');
+    doc.text('MillTrack',15,22);
+    doc.setTextColor(139,144,160); doc.setFontSize(11); doc.setFont('helvetica','normal');
+    doc.text('Monthly Meal Management Report — '+month,15,32);
+    doc.setTextColor(255,255,255); doc.setFontSize(10);
+    doc.text('Generated: '+new Date().toLocaleDateString(),15,42);
+
+    // Stats row
+    const stats=[[`${totalMeals.toFixed(1)}`,'Total Meals'],[`${totalExp.toLocaleString()}tk`,'Expenses'],[`${rate.toFixed(2)}tk`,'Per Meal']];
+    stats.forEach((s,i)=>{
+      const x=15+i*65;
+      doc.setFillColor(26,30,39); doc.roundedRect(x,58,58,22,3,3,'F');
+      doc.setTextColor(0,212,160); doc.setFontSize(14); doc.setFont('helvetica','bold');
+      doc.text(s[0],x+29,68,{align:'center'});
+      doc.setTextColor(139,144,160); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(s[1],x+29,74,{align:'center'});
+    });
+
+    // Table
+    doc.setFillColor(26,30,39); doc.rect(10,88,190,10,'F');
+    doc.setTextColor(139,144,160); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    ['#','Name','Email','Meals','Cost','Paid','Due','Status'].forEach((h,i)=>{
+      const xs=[13,22,55,105,122,140,158,175];
+      doc.text(h,xs[i],95);
+    });
+    doc.setDrawColor(40,48,60); doc.line(10,98,200,98);
+
+    users.forEach((u,i)=>{
+      const y=104+i*10;
+      const meals=userMeals(u.id),cost=meals*rate,paid=parseFloat(u.paid)||0,due=cost-paid;
+      if(i%2===1){doc.setFillColor(19,22,28);doc.rect(10,y-6,190,10,'F');}
+      doc.setTextColor(232,234,240); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+      doc.text(String(i+1),13,y);
+      doc.text(u.name.slice(0,14),22,y);
+      doc.text(u.email.slice(0,22),55,y);
+      doc.text(meals.toFixed(1),105,y);
+      doc.text(cost.toFixed(0)+'tk',122,y);
+      doc.text(paid.toFixed(0)+'tk',140,y);
+      due>0?doc.setTextColor(255,107,107):doc.setTextColor(0,212,160);
+      doc.text((due>0?'+':'-')+(Math.abs(due).toFixed(0))+'tk',158,y);
+      doc.setTextColor(232,234,240);
+      doc.text(due>0?'DUE':'CLEAR',175,y);
+    });
+
+    doc.setTextColor(85,91,110); doc.setFontSize(8);
+    doc.text('MillTrack — Meal Management System',105,287,{align:'center'});
+    doc.save('MillTrack-Report-'+month.replace(' ','-')+'.pdf');
+    showToast('PDF exported!');
+  },200);
+}
+
+// ─── UTILS ───
+function showToast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show '+(type==='error'?'error':'success');
+  setTimeout(()=>t.className='',2800);
+}
+
+function toggleSidebar(){
+  const s=document.getElementById('sidebar');
+  s.style.display=s.style.display==='flex'?'none':'flex';
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); });
+});
+
+// Enter key login
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && document.getElementById('auth-screen').style.display!=='none') doAuth();
+});
+document.getElementById('auth-btn').addEventListener('click', doAuth);
+
+// ─── BOOT ───
+seedData();
+restoreSession();
+</script>
+</body>
+</html>
